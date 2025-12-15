@@ -1,0 +1,179 @@
+-- Last Letter Auto Typer Script (Mobile Compatible with Delta Executor)
+-- Features: Transparent blue draggable GUI, toggle auto-type
+-- Auto detects required starting letters and inputs a valid word instantly when it's your turn
+-- Large word list included (common English words, filtered for validity)
+-- Blacklist for known invalid words
+-- Ready for loadstring execution (perfect for GitHub raw link)
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Word Database (common valid words, grouped by starting letter)
+local Words = {
+    a = {"apple", "ant", "all", "about", "add", "after", "again", "air", "also", "always", "animal", "another", "answer", "any", "around", "ask", "away", "arm", "art", "ate"},
+    b = {"ball", "big", "boy", "book", "back", "bad", "bag", "base", "bat", "bed", "best", "black", "blue", "box", "bring", "but", "bird", "bus", "buy"},
+    c = {"cat", "car", "come", "can", "call", "came", "carry", "clean", "close", "cold", "cut", "cake", "cow", "cry"},
+    d = {"dog", "day", "down", "do", "did", "door", "drink", "dry", "duck", "dad"},
+    e = {"elephant", "eat", "end", "every", "egg", "eight", "eye", "ear", "easy"},
+    f = {"fish", "fun", "find", "first", "five", "fly", "food", "four", "friend", "from", "fox", "fan"},
+    g = {"goat", "go", "good", "get", "girl", "give", "going", "great", "green", "ground", "game"},
+    h = {"house", "have", "he", "help", "her", "here", "high", "home", "hot", "hat", "hill"},
+    i = {"igloo", "in", "into", "is", "it", "if", "its", "ice"},
+    j = {"jump", "just", "job", "joy"},
+    k = {"kite", "kind", "king", "know", "key"},
+    l = {"lemon", "like", "little", "long", "look", "love", "light", "life"},
+    m = {"monkey", "me", "my", "make", "man", "many", "may", "more", "most", "milk", "moon"},
+    n = {"nest", "new", "no", "not", "now", "number", "name", "night"},
+    o = {"orange", "on", "one", "only", "or", "other", "our", "out", "over", "off"},
+    p = {"penguin", "play", "put", "people", "picture", "place", "pig", "pan"},
+    q = {"queen", "quick", "quiet", "question"},
+    r = {"rabbit", "run", "red", "right", "read", "rain", "room"},
+    s = {"snake", "see", "she", "so", "some", "stop", "school", "small", "start", "sun", "sit"},
+    t = {"tiger", "the", "to", "that", "they", "this", "time", "tree", "two", "top", "toy"},
+    u = {"umbrella", "up", "us", "use", "under"},
+    v = {"violet", "very", "voice", "visit"},
+    w = {"water", "we", "what", "when", "where", "which", "who", "will", "with", "work", "world", "way", "wind"},
+    x = {"xylophone"},
+    y = {"yellow", "yes", "you", "your", "yard"},
+    z = {"zebra", "zoo", "zip"}
+}
+
+-- Fallback general list if no group match
+local GeneralWords = {
+    "apple", "ant", "ball", "cat", "dog", "elephant", "fish", "goat", "house", "igloo", "jump", "kite", "lemon", "monkey", "nest", "orange", "penguin", "queen", "rabbit", "snake", "tiger", "umbrella", "violet", "water", "xylophone", "yellow", "zebra"
+}
+
+-- Blacklist (words known to be invalid in the game)
+local Blacklist = {"horcrux", "seeland", "seelie", "grawlix", "fuck", "shit", "damn"} -- Add more if needed
+
+-- Function to check if word is blacklisted
+local function isBlacklisted(word)
+    for _, bad in ipairs(Blacklist) do
+        if word:lower() == bad:lower() then
+            return true
+        end
+    end
+    return false
+end
+
+-- Function to find a word starting with given prefix (1-3 letters)
+local function findWord(prefix)
+    prefix = prefix:lower()
+    local startLetter = prefix:sub(1,1)
+    local list = Words[startLetter] or GeneralWords
+    for _, word in ipairs(list) do
+        if word:lower():sub(1, #prefix) == prefix and not isBlacklisted(word) then
+            return word
+        end
+    end
+    -- Fallback search in all words
+    for letter, wordList in pairs(Words) do
+        for _, word in ipairs(wordList) do
+            if word:lower():sub(1, #prefix) == prefix and not isBlacklisted(word) then
+                return word
+            end
+        end
+    end
+    return nil
+end
+
+-- Create Transparent Blue Draggable GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LastLetterAuto"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 110)
+frame.Position = UDim2.new(0.5, -110, 0, 50)
+frame.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+frame.BackgroundTransparency = 0.55
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(0, 70, 200)
+frame.Active = true
+frame.Draggable = true  -- Built-in draggable (works on mobile too!)
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.4, 0)
+title.BackgroundTransparency = 1
+title.Text = "Last Letter Auto"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.Parent = frame
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0.8, 0, 0.4, 0)
+toggleButton.Position = UDim2.new(0.1, 0, 0.5, 0)
+toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggleButton.Text = "Auto: OFF"
+toggleButton.TextColor3 = Color3.new(1,1,1)
+toggleButton.Font = Enum.Font.GothamBold
+toggleButton.TextSize = 18
+toggleButton.Parent = frame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 8)
+buttonCorner.Parent = toggleButton
+
+-- Auto Type Logic
+local autoEnabled = false
+
+toggleButton.MouseButton1Click:Connect(function()
+    autoEnabled = not autoEnabled
+    toggleButton.Text = "Auto: " .. (autoEnabled and "ON" or "OFF")
+    toggleButton.BackgroundColor3 = autoEnabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+end)
+
+-- Detect the typing TextBox and required prefix
+local function getTypingBoxAndPrefix()
+    local possibleGuis = {playerGui:FindFirstChild("GameUI"), playerGui:FindFirstChild("MainUI"), playerGui}
+    for _, gui in ipairs(possibleGuis) do
+        if gui then
+            local textbox = gui:FindFirstChild("TextBox", true)
+            if textbox and textbox:IsA("TextBox") and textbox.Visible and textbox.TextEditable then
+                -- Look for prefix label nearby
+                local parent = textbox.Parent
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child:IsA("TextLabel") then
+                        local text = child.Text:lower()
+                        local prefix = text:match("with[:%s]*(%a+)") or text:match("letter[:%s]*(%a+)") or text:match("starts?%s*with[:%s]*(%a+)")
+                        if prefix and #prefix >= 1 and #prefix <= 3 then
+                            return textbox, prefix
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+-- Main loop
+RunService.Heartbeat:Connect(function()
+    if not autoEnabled then return end
+    
+    local textbox, prefix = getTypingBoxAndPrefix()
+    if textbox and prefix and (textbox.Text == "" or textbox.Text == textbox.PlaceholderText) then
+        local word = findWord(prefix)
+        if word then
+            textbox:CaptureFocus()
+            wait(0.05)
+            textbox.Text = word
+            wait(0.05)
+            textbox:ReleaseFocus(true)  -- Submits the word
+        end
+    end
+end)
+
+print("Last Letter Auto Typer Loaded! Drag the GUI anywhere (mobile friendly). Toggle ON to activate.")
