@@ -1,19 +1,15 @@
--- Last Letter Auto Typer (Mobile Fixed Version)
--- Fixes: Toggle button now works on mobile (uses TouchTap + MouseButton1Click)
--- Mobile submission: Avoids virtual keyboard issues by setting text without focusing
--- Improved detection and prefix matching
--- Larger word list
+-- Last Letter Auto Typer (Mobile FIXED - No Keyboard Popup)
+-- Toggle works on mobile tap, direct text input (no focus = no keyboard)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Expanded Word List
+-- Large Word List
 local Words = {
-    a = {"apple", "ant", "all", "about", "add", "after", "again", "air", "also", "always", "animal", "another", "answer", "any", "around", "ask", "away", "arm", "art", "ate", "above", "across", "act", "age", "ago", "almost", "along", "already", "am", "and", "angle", "appear", "area", "as", "ask", "away"},
+    a = {"apple", "ant", "all", "about", "add", "after", "again", "air", "also", "always", "animal", "another", "answer", "any", "around", "ask", "away", "arm", "art", "ate", "above", "across", "act", "age", "ago", "almost", "along", "already", "am", "and", "angle", "appear", "area", "as"},
     b = {"ball", "big", "boy", "book", "back", "bad", "bag", "base", "bat", "bed", "best", "black", "blue", "box", "bring", "but", "bird", "bus", "buy", "baby", "balloon", "beach", "bear", "beautiful", "bee", "before", "begin", "below", "better", "between", "bike", "birthday", "boat", "body", "bone", "bread", "bridge", "brown", "build"},
     c = {"cat", "car", "come", "can", "call", "came", "carry", "clean", "close", "cold", "cut", "cake", "cow", "cry", "catch", "cause", "change", "child", "city", "class", "clock", "cloud", "color", "cool", "country", "course", "cover"},
     d = {"dog", "day", "down", "do", "did", "door", "drink", "dry", "duck", "dad", "dance", "dark", "dear", "desk", "different", "does", "done", "dragon", "dream", "drive"},
@@ -35,6 +31,120 @@ local Words = {
     t = {"tiger", "the", "to", "that", "they", "this", "time", "tree", "two", "top", "toy", "table", "take", "talk", "tell", "ten", "than", "their", "them", "then", "there", "these", "thing", "think", "those", "three", "through", "today", "together", "told", "tomorrow", "too", "town", "train", "travel", "true", "try", "turn"},
     u = {"umbrella", "up", "us", "use", "under", "until", "upon"},
     v = {"violet", "very", "voice", "visit", "valley", "vegetable", "view"},
+    w = {"water", "we", "what", "when", "where", "which", "who", "will", "with", "work", "world", "way", "wind", "walk", "wall", "want", "war", "warm", "was", "watch", "wave", "week", "well", "went", "were", "west", "white", "why", "window", "winter", "wish", "woman", "word", "write"},
+    x = {"xylophone"},
+    y = {"yellow", "yes", "you", "your", "yard", "year", "yet", "young"},
+    z = {"zebra", "zoo", "zip", "zero"}
+}
+
+local Blacklist = {"horcrux", "seeland", "seelie", "grawlix", "fuck", "shit", "damn", "ass", "bitch"}
+
+local function isBlacklisted(word)
+    for _, bad in ipairs(Blacklist) do
+        if word:lower() == bad:lower() then return true end
+    end
+    return false
+end
+
+local function findWord(prefix)
+    prefix = prefix:lower()
+    local start = prefix:sub(1,1)
+    local list = Words[start] or {}
+    for _, word in ipairs(list) do
+        if word:lower():sub(1, #prefix) == prefix and not isBlacklisted(word) then
+            return word
+        end
+    end
+    return nil
+end
+
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LastLetterAuto"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 120)
+frame.Position = UDim2.new(0.5, -120, 0, 40)
+frame.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+frame.BackgroundTransparency = 0.5
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 16)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.45, 0)
+title.BackgroundTransparency = 1
+title.Text = "Last Letter Auto"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.Parent = frame
+
+local toggle = Instance.new("TextButton")
+toggle.Size = UDim2.new(0.8, 0, 0.4, 0)
+toggle.Position = UDim2.new(0.1, 0, 0.5, 0)
+toggle.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggle.Text = "Auto: OFF"
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.Font = Enum.Font.GothamBold
+toggle.TextSize = 20
+toggle.Parent = frame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = toggle
+
+-- Fixed Toggle for Mobile
+local enabled = false
+local function toggleAuto()
+    enabled = not enabled
+    toggle.Text = "Auto: " .. (enabled and "ON" or "OFF")
+    toggle.BackgroundColor3 = enabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+end
+
+toggle.MouseButton1Click:Connect(toggleAuto)
+toggle.TouchTap:Connect(toggleAuto)  -- This fixes tapping on mobile!
+
+-- Broader Detection
+local function getInput()
+    for _, desc in pairs(playerGui:GetDescendants()) do
+        if desc:IsA("TextBox") and desc.Visible and desc.TextEditable and (desc.Text == "" or #desc.Text < 3) then
+            local parent = desc.Parent
+            for _, lbl in pairs(parent:GetDescendants()) do
+                if lbl:IsA("TextLabel") then
+                    local txt = lbl.Text:lower()
+                    local prefix = txt:match("starts? ?with:? ?(%a+)%s") or txt:match("letter:? ?(%a+)%s") or txt:match("with:? ?(%a+)%s") or txt:match("(%a%a?%a?)")
+                    if prefix and #prefix >=1 and #prefix <=3 then
+                        return desc, prefix
+                    end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+-- Main Loop - Direct text set (no focus, no keyboard popup)
+RunService.Heartbeat:Connect(function()
+    if not enabled then return end
+    local tb, prefix = getInput()
+    if tb and prefix then
+        local word = findWord(prefix)
+        if word then
+            tb.Text = word
+            task.wait(0.1)  -- Gives game time to register and submit
+        end
+    end
+end)
+
+print("Last Letter Auto Typer MOBILE FIXED loaded! Tap toggle & enjoy.")    v = {"violet", "very", "voice", "visit", "valley", "vegetable", "view"},
     w = {"water", "we", "what", "when", "where", "which", "who", "will", "with", "work", "world", "way", "wind", "walk", "wall", "want", "war", "warm", "was", "watch", "wave", "week", "well", "went", "were", "west", "white", "why", "window", "winter", "wish", "woman", "word", "write"},
     x = {"xylophone"},
     y = {"yellow", "yes", "you", "your", "yard", "year", "yet", "young"},
