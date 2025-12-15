@@ -1,40 +1,155 @@
--- Last Letter Auto Typer Script (Mobile Compatible with Delta Executor)
--- Features: Transparent blue draggable GUI, toggle auto-type
--- Auto detects required starting letters and inputs a valid word instantly when it's your turn
--- Large word list included (common English words, filtered for validity)
--- Blacklist for known invalid words
--- Ready for loadstring execution (perfect for GitHub raw link)
+-- Last Letter Auto Typer (Updated & Optimized)
+-- Loaded via: loadstring(game:HttpGet("https://raw.githubusercontent.com/hahahahahhahk/Mandemandemandela/refs/heads/main/Mandela"))()
+-- Features: Mobile-friendly draggable GUI, toggle, better detection, larger word list
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Word Database (common valid words, grouped by starting letter)
+-- Expanded Word List (grouped by starting letter for faster lookup)
 local Words = {
-    a = {"apple", "ant", "all", "about", "add", "after", "again", "air", "also", "always", "animal", "another", "answer", "any", "around", "ask", "away", "arm", "art", "ate"},
-    b = {"ball", "big", "boy", "book", "back", "bad", "bag", "base", "bat", "bed", "best", "black", "blue", "box", "bring", "but", "bird", "bus", "buy"},
-    c = {"cat", "car", "come", "can", "call", "came", "carry", "clean", "close", "cold", "cut", "cake", "cow", "cry"},
-    d = {"dog", "day", "down", "do", "did", "door", "drink", "dry", "duck", "dad"},
-    e = {"elephant", "eat", "end", "every", "egg", "eight", "eye", "ear", "easy"},
-    f = {"fish", "fun", "find", "first", "five", "fly", "food", "four", "friend", "from", "fox", "fan"},
-    g = {"goat", "go", "good", "get", "girl", "give", "going", "great", "green", "ground", "game"},
-    h = {"house", "have", "he", "help", "her", "here", "high", "home", "hot", "hat", "hill"},
-    i = {"igloo", "in", "into", "is", "it", "if", "its", "ice"},
-    j = {"jump", "just", "job", "joy"},
-    k = {"kite", "kind", "king", "know", "key"},
-    l = {"lemon", "like", "little", "long", "look", "love", "light", "life"},
-    m = {"monkey", "me", "my", "make", "man", "many", "may", "more", "most", "milk", "moon"},
-    n = {"nest", "new", "no", "not", "now", "number", "name", "night"},
-    o = {"orange", "on", "one", "only", "or", "other", "our", "out", "over", "off"},
-    p = {"penguin", "play", "put", "people", "picture", "place", "pig", "pan"},
-    q = {"queen", "quick", "quiet", "question"},
-    r = {"rabbit", "run", "red", "right", "read", "rain", "room"},
-    s = {"snake", "see", "she", "so", "some", "stop", "school", "small", "start", "sun", "sit"},
-    t = {"tiger", "the", "to", "that", "they", "this", "time", "tree", "two", "top", "toy"},
+    a = {"apple", "ant", "all", "about", "add", "after", "again", "air", "also", "always", "animal", "another", "answer", "any", "around", "ask", "away", "arm", "art", "ate", "above", "across", "act", "age", "ago", "almost", "along", "already", "am", "and", "angle", "appear", "area", "as"},
+    b = {"ball", "big", "boy", "book", "back", "bad", "bag", "base", "bat", "bed", "best", "black", "blue", "box", "bring", "but", "bird", "bus", "buy", "baby", "balloon", "beach", "bear", "beautiful", "bee", "before", "begin", "below", "better", "between", "bike", "birthday", "boat", "body", "bone", "bread", "bridge", "brown", "build"},
+    c = {"cat", "car", "come", "can", "call", "came", "carry", "clean", "close", "cold", "cut", "cake", "cow", "cry", "catch", "cause", "change", "child", "city", "class", "clock", "cloud", "color", "cool", "country", "course", "cover"},
+    d = {"dog", "day", "down", "do", "did", "door", "drink", "dry", "duck", "dad", "dance", "dark", "dear", "desk", "different", "does", "done", "dragon", "dream", "drive"},
+    e = {"elephant", "eat", "end", "every", "egg", "eight", "eye", "ear", "easy", "each", "early", "earth", "east", "even", "ever", "example", "everything"},
+    f = {"fish", "fun", "find", "first", "five", "fly", "food", "four", "friend", "from", "fox", "fan", "face", "fall", "family", "far", "farm", "fast", "father", "feel", "feet", "few", "field", "fight", "fire", "floor", "flower", "follow", "forest", "free", "frog", "front", "fruit", "full"},
+    g = {"goat", "go", "good", "get", "girl", "give", "going", "great", "green", "ground", "game", "garden", "gas", "gave", "general", "glass", "gold", "got", "group", "grow"},
+    h = {"house", "have", "he", "help", "her", "here", "high", "home", "hot", "hat", "hill", "hair", "hand", "happy", "hard", "has", "head", "hear", "heart", "horse", "how", "hundred"},
+    i = {"igloo", "in", "into", "is", "it", "if", "its", "ice", "idea", "important", "inside", "item"},
+    j = {"jump", "just", "job", "joy", "jelly", "juice", "jungle"},
+    k = {"kite", "kind", "king", "know", "key", "keep", "kitchen"},
+    l = {"lemon", "like", "little", "long", "look", "love", "light", "life", "land", "large", "last", "late", "laugh", "learn", "left", "leg", "let", "letter", "line", "live", "low"},
+    m = {"monkey", "me", "my", "make", "man", "many", "may", "more", "most", "milk", "moon", "made", "map", "mark", "mean", "men", "might", "money", "mother", "move", "much", "music"},
+    n = {"nest", "new", "no", "not", "now", "number", "name", "night", "near", "need", "never", "next", "nice", "north"},
+    o = {"orange", "on", "one", "only", "or", "other", "our", "out", "over", "off", "often", "oil", "old", "once", "open", "order"},
+    p = {"penguin", "play", "put", "people", "picture", "place", "pig", "pan", "paper", "part", "party", "pass", "past", "path", "pay", "peace", "pen", "person", "pet", "phone", "plant", "point", "pond", "power", "pretty", "pull"},
+    q = {"queen", "quick", "quiet", "question", "quite"},
+    r = {"rabbit", "run", "red", "right", "read", "rain", "room", "race", "radio", "reach", "real", "rest", "river", "road", "rock", "round"},
+    s = {"snake", "see", "she", "so", "some", "stop", "school", "small", "start", "sun", "sit", "said", "same", "say", "sea", "second", "sentence", "set", "seven", "shape", "short", "show", "side", "sing", "six", "sky", "sleep", "snow", "song", "sound", "south", "spell", "sport", "stand", "state", "stay", "story", "street", "study", "summer", "sure"},
+    t = {"tiger", "the", "to", "that", "they", "this", "time", "tree", "two", "top", "toy", "table", "take", "talk", "tell", "ten", "than", "their", "them", "then", "there", "these", "thing", "think", "those", "three", "through", "today", "together", "told", "tomorrow", "too", "town", "train", "travel", "true", "try", "turn"},
+    u = {"umbrella", "up", "us", "use", "under", "until", "upon"},
+    v = {"violet", "very", "voice", "visit", "valley", "vegetable", "view"},
+    w = {"water", "we", "what", "when", "where", "which", "who", "will", "with", "work", "world", "way", "wind", "walk", "wall", "want", "war", "warm", "was", "watch", "wave", "week", "well", "went", "were", "west", "white", "why", "window", "winter", "wish", "woman", "word", "write"},
+    x = {"xylophone"},
+    y = {"yellow", "yes", "you", "your", "yard", "year", "yet", "young"},
+    z = {"zebra", "zoo", "zip", "zero"}
+}
+
+-- Blacklist
+local Blacklist = {"horcrux", "seeland", "seelie", "grawlix", "fuck", "shit", "damn", "ass", "bitch"}
+
+local function isBlacklisted(word)
+    for _, bad in ipairs(Blacklist) do
+        if word:lower() == bad:lower() then return true end
+    end
+    return false
+end
+
+local function findWord(prefix)
+    prefix = prefix:lower()
+    local start = prefix:sub(1,1)
+    local list = Words[start] or {}
+    for _, word in ipairs(list) do
+        if word:lower():sub(1, #prefix) == prefix and not isBlacklisted(word) then
+            return word
+        end
+    end
+    return nil
+end
+
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "LastLetterAuto"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 120)
+frame.Position = UDim2.new(0.5, -120, 0, 40)
+frame.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+frame.BackgroundTransparency = 0.5
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 16)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.45, 0)
+title.BackgroundTransparency = 1
+title.Text = "Last Letter Auto"
+title.TextColor3 = Color3.new(1,1,1)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.Parent = frame
+
+local toggle = Instance.new("TextButton")
+toggle.Size = UDim2.new(0.8, 0, 0.4, 0)
+toggle.Position = UDim2.new(0.1, 0, 0.5, 0)
+toggle.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+toggle.Text = "Auto: OFF"
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.Font = Enum.Font.GothamBold
+toggle.TextSize = 20
+toggle.Parent = frame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 10)
+btnCorner.Parent = toggle
+
+-- Toggle logic
+local enabled = false
+toggle.MouseButton1Click:Connect(function()
+    enabled = not enabled
+    toggle.Text = "Auto: " .. (enabled and "ON" or "OFF")
+    toggle.BackgroundColor3 = enabled and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
+end)
+
+-- Detection
+local function getInput()
+    for _, gui in pairs({playerGui:FindFirstChild("GameUI"), playerGui:FindFirstChild("MainUI"), playerGui}) do
+        if gui then
+            local tb = gui:FindFirstChild("TextBox", true)
+            if tb and tb:IsA("TextBox") and tb.Visible and tb.TextEditable and (tb.Text == "" or tb.Text == tb.PlaceholderText) then
+                local parent = tb.Parent
+                for _, lbl in pairs(parent:GetChildren()) do
+                    if lbl:IsA("TextLabel") then
+                        local txt = lbl.Text:lower()
+                        local prefix = txt:match("with[:%s]*(%a%a?%a?)") or txt:match("letter[:%s]*(%a%a?%a?)") or txt:match("starts?%s*with[:%s]*(%a%a?%a?)")
+                        if prefix and #prefix >= 1 and #prefix <= 3 then
+                            return tb, prefix
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return nil, nil
+end
+
+-- Main loop
+RunService.Heartbeat:Connect(function()
+    if not enabled then return end
+    local tb, prefix = getInput()
+    if tb and prefix then
+        local word = findWord(prefix)
+        if word then
+            tb:CaptureFocus()
+            task.wait(0.05)
+            tb.Text = word
+            task.wait(0.05)
+            tb:ReleaseFocus(true)
+        end
+    end
+end)
+
+print("Last Letter Auto Typer successfully loaded from GitHub! Drag GUI & toggle ON.")    t = {"tiger", "the", "to", "that", "they", "this", "time", "tree", "two", "top", "toy"},
     u = {"umbrella", "up", "us", "use", "under"},
     v = {"violet", "very", "voice", "visit"},
     w = {"water", "we", "what", "when", "where", "which", "who", "will", "with", "work", "world", "way", "wind"},
